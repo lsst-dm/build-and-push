@@ -35,12 +35,15 @@ inputs:
   build-args:
     description: "List of build arg to pass to image"
     required: false
+  labels:
+    description: "List of label to pass add to the image"
+    required: false
 outputs:
   tag:
     description: "The tag of the Docker image that was built."
     value: ${{ steps.meta.outputs.tags }}
   imageid:
-    description: "Image ID"
+    description: "Image ID (sha)"
     value: ${{ steps.build.outputs.imageid }}
   digest:
     description: "Image digest"
@@ -100,5 +103,6 @@ runs:
         platforms: ${{ inputs.platforms }}
         tags: ${{ steps.meta.outputs.tags }}
         build-args: ${{ inputs.build-args }}
+        labels: ${{ inputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
