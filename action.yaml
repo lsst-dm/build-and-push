@@ -1,0 +1,104 @@
+name: "Build and push"
+description: >
+  This composite action builds a Docker image, tags it with the current git
+  branch/tag and if is the main branch it also tags it with latest.
+  Finally pushes it to ghcr.io but could push to docker.
+inputs:
+  github_token:
+    description: "The GitHub token to use for authentication."
+    required: true
+  docker_token:
+    description: "The Docker token to use for authentication."
+    required: false
+  image:
+    description: "The name of the Docker image to build."
+    required: false
+    default: ${{ github.repository }}
+  dockerfile:
+    description: "The name of the Dockerfile to build."
+    required: false
+    default: "Dockerfile"
+  context:
+    description: "The build context to use."
+    required: false
+    default: "."
+  push:
+    description: "Whether to push the image to ghcr.io."
+    required: false
+    default: "true"
+  platforms:
+    description: "List of target platforms for build"
+    required: false
+  tags:
+    description: "List of tags using events from docker/metadata-action"
+    required: false
+  build-args:
+    description: "List of build arg to pass to image"
+    required: false
+outputs:
+  tag:
+    description: "The tag of the Docker image that was built."
+    value: ${{ steps.meta.outputs.tags }}
+  imageid:
+    description: "Image ID"
+    value: ${{ steps.build.outputs.imageid }}
+  digest:
+    description: "Image digest"
+    value: ${{ steps.build.outputs.digest }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          name=${{ inputs.image }},enable=${{ inputs.docker_token != ''}}
+          name=ghcr.io/${{ inputs.image }}
+        tags: |
+          type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
+          type=ref,event=branch
+          type=ref,event=tag
+          type=ref,event=pr,suffix=/${{ github.head_ref }}
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      if: fromJSON(inputs.push) == true
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ inputs.github_token }}
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      if: fromJSON(inputs.push) == true
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ inputs.github_token }}
+
+    - name: Log in to Docker Container Registry
+      uses: docker/login-action@v3
+      if: ${{ inputs.docker_token != '' }}
+      with:
+        username: ${{ github.repository_owner }}
+        password: ${{ inputs.docker_token }}
+    - name: Build and push
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: "${{ inputs.context }}"
+        file: "${{ inputs.dockerfile }}"
+        push: ${{ fromJSON(inputs.push) == true }}
+        platforms: ${{ inputs.platforms }}
+        tags: ${{ steps.meta.outputs.tags }}
+        build-args: ${{ inputs.build-args }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
