@@ -69,7 +69,7 @@ runs:
         # yamllint disable rule:line-length
         tags: |
           type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
-          type=raw,value=latest, enable=${{ github.ref_name == 'main' && inputs.tag == '' }}
+          type=raw,value=latest, enable=${{ github.ref_name == 'main' }}
           type=ref,event=branch,enable=${{ inputs.tag == '' }}
           type=ref,event=tag,enable=${{ inputs.tag == '' }}
           type=ref,event=pr,suffix=/${{ github.head_ref }}
