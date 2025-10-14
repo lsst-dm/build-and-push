@@ -41,7 +41,8 @@ inputs:
   no-cache:
     description: "Disables caching"
     required: false
-    default: "false"
+    default: false
+    type: boolean
 outputs:
   tag:
     description: "The tag of the Docker image that was built."
@@ -101,7 +102,7 @@ runs:
         tags: ${{ steps.meta.outputs.tags }}
         build-args: ${{ inputs.build-args }}
         labels: ${{ inputs.labels }}
-        cache-from: ${{ fromJSON(inputs.no-cache) != true && 'type=gha' || '' }}
+        cache-from: ${{ inputs.no-cache && 'type=gha' || '' }}
         cache-to: >
-          ${{ fromJSON(inputs.no-cache) != true && 'type=gha,mode=max' || '' }}
-        no-cache: ${{ fromJSON(inputs.no-cache) == true}}
+          ${{ inputs.no-cache && 'type=gha,mode=max' || '' }}
+        no-cache: ${{ inputs.no-cache }}
